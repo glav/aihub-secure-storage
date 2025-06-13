@@ -1,2 +1,2 @@
-# copilotplay
-A sandbox to test various copilot and model operations
+# Azure AI hub with Secure storage
+
