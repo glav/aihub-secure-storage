@@ -8,5 +8,6 @@ fi
 loc="$1"
 rg="$2"
 
-az group create -l $loc -n $rg
+expires_on=$(date -d "+7 days" +"%Y-%m-%d")
+az group create -l $loc -n $rg --tags expiresOn=$expires_on
 az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg

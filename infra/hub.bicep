@@ -67,30 +67,10 @@ resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview
     keyVault: keyVault.id
     hbiWorkspace: false
     managedNetwork: {
-      isolationMode: 'AllowInternetOutbound'
+      isolationMode: 'AllowOnlyApprovedOutbound'
       status: {
         status: 'Active'
         sparkReady: false
-      }
-      outboundRules: {
-        'storage-blob-rule': {
-          type: 'PrivateEndpoint'
-          destination: {
-            serviceResourceId: storageAccountId
-            subresourceTarget: 'blob'
-            sparkEnabled: false
-          }
-          category: 'UserDefined'
-        }
-        'storage-file-rule': {
-          type: 'PrivateEndpoint'
-          destination: {
-            serviceResourceId: storageAccountId
-            subresourceTarget: 'file'
-            sparkEnabled: false
-          }
-          category: 'UserDefined'
-        }
       }
     }
     v1LegacyMode: false
@@ -134,6 +114,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2019-09-01' = {
       name: 'standard'
       family: 'A'
     }
+    enableSoftDelete: false
   }
 }
 

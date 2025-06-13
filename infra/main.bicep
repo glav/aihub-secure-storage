@@ -4,20 +4,21 @@ module storage 'storage_account.bicep' = {
     location: resourceGroup().location
   }
 }
-module hub 'hub.bicep' = {
-  name: 'hub'
-  params: {
-    location: resourceGroup().location
-    storageAccountId: storage.outputs.storageAccountId
-  }
-}
 
 module networking 'storage_networking.bicep' = {
   name: 'networking'
   params: {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
-    workspaces_hub_test_network_name: hub.outputs.hubName
+    workspaces_hub_test_network_name: 'hub-test-network'
+  }
+}
+
+module hub 'hub.bicep' = {
+  name: 'hub'
+  params: {
+    location: resourceGroup().location
+    storageAccountId: storage.outputs.storageAccountId
   }
 }
 

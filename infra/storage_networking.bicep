@@ -14,6 +14,14 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
     }
     subnets: [
       {
+        name: 'default'
+        properties: {
+          addressPrefix: '10.0.0.0/24'
+          privateEndpointNetworkPolicies: 'Disabled'
+          privateLinkServiceNetworkPolicies: 'Disabled'
+        }
+      }
+      {
         name: 'private-endpoints'
         properties: {
           addressPrefix: '10.0.1.0/24'
@@ -21,6 +29,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
           privateLinkServiceNetworkPolicies: 'Disabled'
         }
       }
+
     ]
   }
 }
