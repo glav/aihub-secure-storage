@@ -20,6 +20,9 @@ module hub 'hub.bicep' = {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
   }
+  dependsOn: [
+    networking
+  ]
 }
 
 output managedNetworkId string = hub.outputs.managedNetworkId

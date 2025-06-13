@@ -67,7 +67,7 @@ resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview
     keyVault: keyVault.id
     hbiWorkspace: false
     managedNetwork: {
-      isolationMode: 'AllowInternetOutbound'
+      isolationMode: 'AllowOnlyApprovedOutbound'
       status: {
         status: 'Active'
         sparkReady: false
