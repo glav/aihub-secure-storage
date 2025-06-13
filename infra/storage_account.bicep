@@ -17,12 +17,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     allowSharedKeyAccess: true  // Required for Azure ML Hub
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Deny'  // Changed to Deny for proper private endpoint setup
-      ipRules: []
-      virtualNetworkRules: []
-    }
+    // networkAcls: {
+    //   bypass: 'AzureServices'
+    //   defaultAction: 'Deny'  // Changed to Deny for proper private endpoint setup
+    //   ipRules: []
+    //   virtualNetworkRules: []
+    // }
   }
 }
 
