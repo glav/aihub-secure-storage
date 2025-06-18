@@ -1,3 +1,4 @@
+
 module storage 'storage_account.bicep' = {
   name: 'storage'
   params: {
@@ -10,7 +11,6 @@ module networking 'storage_networking.bicep' = {
   params: {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
-    workspaces_hub_test_network_name: 'hub-test-network'
   }
 }
 
@@ -23,6 +23,15 @@ module hub 'hub.bicep' = {
   dependsOn: [
     networking
   ]
+}
+
+module storage_access 'storage_account_access.bicep' = {
+  name: 'storage_access'
+  params: {
+    hubResourceId: hub.outputs.hubId
+    storageAccountName: storage.outputs.storageAccountName
+    location: resourceGroup().location
+  }
 }
 
 output managedNetworkId string = hub.outputs.managedNetworkId

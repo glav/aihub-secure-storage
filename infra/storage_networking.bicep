@@ -1,10 +1,10 @@
 param location string = 'australiaeast'
-param workspaces_hub_test_network_name string = 'hub-test-network'
+param hubName string = 'hub-test-network'
 param storageAccountId string
 
 // Create a Virtual Network for private endpoints
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
-  name: 'vnet-${workspaces_hub_test_network_name}'
+  name: 'vnet-${hubName}'
   location: location
   properties: {
     addressSpace: {
@@ -36,12 +36,12 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
 
 // Storage Account Private Endpoint for Blob
 resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
-  name: 'pep-${workspaces_hub_test_network_name}-blob'
+  name: 'pep-${hubName}-blob'
   location: location
   properties: {
     privateLinkServiceConnections: [
       {
-        name: 'pls-${workspaces_hub_test_network_name}-blob'
+        name: 'pls-${hubName}-blob'
         properties: {
           privateLinkServiceId: storageAccountId
           groupIds: [
@@ -58,12 +58,12 @@ resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
 
 // Storage Account Private Endpoint for File
 resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
-  name: 'pep-${workspaces_hub_test_network_name}-file'
+  name: 'pep-${hubName}-file'
   location: location
   properties: {
     privateLinkServiceConnections: [
       {
-        name: 'pls-${workspaces_hub_test_network_name}-file'
+        name: 'pls-${hubName}-file'
         properties: {
           privateLinkServiceId: storageAccountId
           groupIds: [
@@ -95,7 +95,7 @@ resource filePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 // Link the Private DNS Zones to the Virtual Network
 resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: blobPrivateDnsZone
-  name: '${workspaces_hub_test_network_name}-blob-link'
+  name: '${hubName}-blob-link'
   location: 'global'
   properties: {
     registrationEnabled: false
@@ -107,7 +107,7 @@ resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNe
 
 resource filePrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: filePrivateDnsZone
-  name: '${workspaces_hub_test_network_name}-file-link'
+  name: '${hubName}-file-link'
   location: 'global'
   properties: {
     registrationEnabled: false
