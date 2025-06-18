@@ -10,4 +10,9 @@ rg="$2"
 
 expires_on=$(date -d "+7 days" +"%Y-%m-%d")
 az group create -l $loc -n $rg --tags expiresOn=$expires_on
-az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg
+
+echo "Deploying...."
+#outputs=$(az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg --query properties.outputs)
+az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg --query properties.outputs
+echo "Bicep deployment outputs:"
+#echo "$outputs"

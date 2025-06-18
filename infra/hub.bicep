@@ -1,18 +1,8 @@
 param hubName string = 'hub-test-network'
 param location string = 'australiaeast'
 param storageAccountId string
-param blobPrivateDnsZoneName string
-param filePrivateDnsZoneName string
 
 var tenantId = subscription().tenantId
-
-resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
-  name: blobPrivateDnsZoneName
-}
-
-resource filePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
-  name: filePrivateDnsZoneName
-}
 
 // Role definitions
 var role_defn_storage_blob_data_contrib = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
@@ -100,10 +90,6 @@ resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview
     hbiWorkspace: false
     managedNetwork: {
       isolationMode: 'AllowOnlyApprovedOutbound'
-      status: {
-        status: 'Active'
-        sparkReady: false
-      }
     }
     v1LegacyMode: false
     publicNetworkAccess: 'Enabled'
@@ -152,31 +138,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: blobPrivateDnsZone
-  name: '${ai_hub.name}-blob-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: ai_hub.properties.managedNetwork.networkId
-    }
-  }
-}
+// This is the key to our errors, being able to get a proper managed virtual network ID
+var hubManagedVnetId = resourceId('Microsoft.MachineLearningServices/workspaces/managedVirtualNetworks', hubName, 'default')
 
-resource filePrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: filePrivateDnsZone
-  name: '${ai_hub.name}-file-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: ai_hub.properties.managedNetwork.networkId
-    }
-  }
-}
-
-output managedNetworkId string = ai_hub.properties.managedNetwork.networkId
 output hubName string = ai_hub.name
 output hubId string = ai_hub.id
 output keyVaultId string = keyVault.id
+output managedNetworkId string = hubManagedVnetId
