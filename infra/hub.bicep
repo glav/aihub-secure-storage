@@ -1,8 +1,18 @@
 param hubName string = 'hub-test-network'
 param location string = 'australiaeast'
 param storageAccountId string
+param blobPrivateDnsZoneName string
+param filePrivateDnsZoneName string
 
 var tenantId = subscription().tenantId
+
+resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+  name: blobPrivateDnsZoneName
+}
+
+resource filePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+  name: filePrivateDnsZoneName
+}
 
 // Role definitions
 var role_defn_storage_blob_data_contrib = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
@@ -138,6 +148,30 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     networkAcls: {
       bypass: 'AzureServices'
       defaultAction: 'Deny'
+    }
+  }
+}
+
+resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: blobPrivateDnsZone
+  name: '${ai_hub.name}-blob-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: ai_hub.properties.managedNetwork.networkId
+    }
+  }
+}
+
+resource filePrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: filePrivateDnsZone
+  name: '${ai_hub.name}-file-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: ai_hub.properties.managedNetwork.networkId
     }
   }
 }

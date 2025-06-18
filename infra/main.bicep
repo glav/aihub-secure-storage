@@ -1,4 +1,3 @@
-
 module storage 'storage_account.bicep' = {
   name: 'storage'
   params: {
@@ -19,6 +18,8 @@ module hub 'hub.bicep' = {
   params: {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
+    blobPrivateDnsZoneName: networking.outputs.blobPrivateDnsZoneName
+    filePrivateDnsZoneName: networking.outputs.filePrivateDnsZoneName
   }
   dependsOn: [
     networking

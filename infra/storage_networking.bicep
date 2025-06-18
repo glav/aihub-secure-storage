@@ -151,3 +151,5 @@ resource filePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
 output vnetId string = virtualNetwork.id
 output blobPrivateEndpointId string = blobPrivateEndpoint.id
 output filePrivateEndpointId string = filePrivateEndpoint.id
+output blobPrivateDnsZoneName string = blobPrivateDnsZoneName
+output filePrivateDnsZoneName string = filePrivateDnsZoneName
