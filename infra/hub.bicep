@@ -2,7 +2,76 @@ param hubName string = 'hub-test-network'
 param location string = 'australiaeast'
 param storageAccountId string
 
-var tenantId = subscription().tenantId
+resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview' = {
+  name: hubName
+  location: location
+  sku: {
+    name: 'Basic'
+    tier: 'Basic'
+  }
+  kind: 'Hub'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    friendlyName: 'Hub test network'
+    storageAccount: storageAccountId
+    keyVault: keyVault.id
+    hbiWorkspace: false
+    allowPublicAccessWhenBehindVnet: true
+    managedNetwork: {
+      isolationMode: 'AllowOnlyApprovedOutbound'
+    }
+    v1LegacyMode: false
+    publicNetworkAccess: 'Enabled'
+    enableDataIsolation: true
+  }
+}
+
+resource ai_hub_project 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview' = {
+  name: 'proj-${hubName}'
+  location: location
+  sku: {
+    name: 'Basic'
+    tier: 'Basic'
+  }
+  kind: 'Project'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    friendlyName: 'AI Project for ${hubName}'
+    hubResourceId: ai_hub.id
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: 'kvaif${uniqueString(resourceGroup().id)}'
+  location: location
+  properties: {
+    enabledForDeployment: true
+    enabledForTemplateDeployment: true
+    enabledForDiskEncryption: true
+    tenantId: subscription().tenantId
+    accessPolicies: []
+    sku: {
+      name: 'standard'
+      family: 'A'
+    }
+    publicNetworkAccess: 'Disabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+    }
+  }
+}
+
+// This is the key to our errors, being able to get a proper managed virtual network ID
+var hubManagedVnetId = resourceId('Microsoft.MachineLearningServices/workspaces/managedVirtualNetworks',hubName,'default')
+//var hubManagedVnetId = '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.MachineLearningServices/workspaces/${hubName}/managedVirtualNetworks/default'
 
 // Role definitions
 var role_defn_storage_blob_data_contrib = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
@@ -72,74 +141,6 @@ resource projectStorageReaderRoleAssignment 'Microsoft.Authorization/roleAssignm
   }
 }
 
-resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview' = {
-  name: hubName
-  location: location
-  sku: {
-    name: 'Basic'
-    tier: 'Basic'
-  }
-  kind: 'Hub'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    friendlyName: 'Hub test network'
-    storageAccount: storageAccountId
-    keyVault: keyVault.id
-    hbiWorkspace: false
-    managedNetwork: {
-      isolationMode: 'AllowOnlyApprovedOutbound'
-    }
-    v1LegacyMode: false
-    publicNetworkAccess: 'Enabled'
-    enableDataIsolation: true
-  }
-}
-
-resource ai_hub_project 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview' = {
-  name: 'proj-${hubName}'
-  location: location
-  sku: {
-    name: 'Basic'
-    tier: 'Basic'
-  }
-  kind: 'Project'
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    friendlyName: 'AI Project for ${hubName}'
-    hubResourceId: ai_hub.id
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-
-
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: 'kvaif${uniqueString(resourceGroup().id)}'
-  location: location
-  properties: {
-    enabledForDeployment: true
-    enabledForTemplateDeployment: true
-    enabledForDiskEncryption: true
-    tenantId: tenantId
-    accessPolicies: []
-    sku: {
-      name: 'standard'
-      family: 'A'
-    }
-    publicNetworkAccess: 'Disabled'
-    networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Deny'
-    }
-  }
-}
-
-// This is the key to our errors, being able to get a proper managed virtual network ID
-var hubManagedVnetId = resourceId('Microsoft.MachineLearningServices/workspaces/managedVirtualNetworks', hubName, 'default')
 
 output hubName string = ai_hub.name
 output hubId string = ai_hub.id

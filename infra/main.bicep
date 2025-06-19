@@ -1,15 +1,21 @@
+param saKind string = 'StorageV2' // Default kind for Azure ML Hub
+param saSkuName string = 'Standard_LRS' // Default SKU for Azure ML Hub
+
 module storage 'storage_account.bicep' = {
   name: 'storage'
   params: {
     location: resourceGroup().location
+    saKind: saKind
+    saSkuName: saSkuName
   }
 }
 
 module networking 'storage_networking.bicep' = {
   name: 'networking'
   params: {
+    storageAccountName: storage.outputs.storageAccountName
+    hubName: hub.outputs.hubName
     location: resourceGroup().location
-    storageAccountId: storage.outputs.storageAccountId
   }
 }
 
@@ -27,20 +33,10 @@ module storage_access 'storage_account_access.bicep' = {
     hubResourceId: hub.outputs.hubId
     storageAccountName: storage.outputs.storageAccountName
     location: resourceGroup().location
+    saKind: saKind
+    saSkuName: saSkuName
   }
 }
 
-module vnet_links 'vnet_links.bicep' = {
-  name: 'vnet_links'
-  params: {
-    hubName: hub.outputs.hubName
-    blobPrivateDnsZoneName: networking.outputs.blobPrivateDnsZoneName
-    filePrivateDnsZoneName: networking.outputs.filePrivateDnsZoneName
-    managedVnetId: hub.outputs.managedNetworkId
-  }
-}
 
-output vnetId string = networking.outputs.vnetId
 output hubManagedVnetId string = hub.outputs.managedNetworkId
-output blobPrivateEndpointId string = networking.outputs.blobPrivateEndpointId
-output filePrivateEndpointId string = networking.outputs.filePrivateEndpointId

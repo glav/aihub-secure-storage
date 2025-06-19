@@ -1,13 +1,15 @@
 param storageAccountName string
 param hubResourceId string
 param location string
+param saKind string = 'StorageV2' // Default kind for Azure ML Hub
+param saSkuName string = 'Standard_LRS' // Default SKU for Azure ML Hub
 
 resource storageAccountAccess 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   name: storageAccountName
   location: location
-  kind: 'StorageV2'
+  kind: saKind
   sku: {
-    name: 'Standard_LRS'
+    name: saSkuName
   }
   properties: {
     publicNetworkAccess: 'Disabled'
@@ -24,6 +26,11 @@ resource storageAccountAccess 'Microsoft.Storage/storageAccounts@2024-01-01' = {
         {
           tenantId: subscription().tenantId
           resourceId: hubResourceId
+        }
+        {
+          tenantId: subscription().tenantId
+          resourceId: resourceId('Microsoft.Security/datascanners', 'storageDataScanner')
+          //resourceId: '/subscriptions/c0652cf3-6d51-4e8d-a5dd-e5805aabb3ef/providers/Microsoft.Security/datascanners/storageDataScanner'
         }
       ]
     }
