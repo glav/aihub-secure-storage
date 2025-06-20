@@ -38,6 +38,27 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   }
 }
 
+resource hubPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
+  name: 'pep-${hubName}-aihub'
+  location: location
+  properties: {
+    privateLinkServiceConnections: [
+      {
+        name: 'pls-${hubName}-aihub'
+        properties: {
+          privateLinkServiceId: resourceId('Microsoft.MachineLearningServices/workspaces', hubName)
+          groupIds: [
+            'amlworkspace'
+          ]
+        }
+      }
+    ]
+    subnet: {
+      id: virtualNetwork.properties.subnets[1].id
+    }
+  }
+}
+
 // Storage Account Private Endpoint for Blob
 resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
   name: 'pep-${hubName}-blob'
@@ -55,7 +76,7 @@ resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
       }
     ]
     subnet: {
-      id: virtualNetwork.properties.subnets[0].id
+      id: virtualNetwork.properties.subnets[1].id
     }
   }
 }
@@ -77,7 +98,7 @@ resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
       }
     ]
     subnet: {
-      id: virtualNetwork.properties.subnets[0].id
+      id: virtualNetwork.properties.subnets[1].id
     }
   }
 }
@@ -85,6 +106,7 @@ resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
 // Create Private DNS Zones for Storage
 var blobPrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
 var filePrivateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
+var mlPrivateDnsZoneName = 'privatelink.api.azureml.ms'
 
 resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: blobPrivateDnsZoneName
@@ -94,6 +116,23 @@ resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 resource filePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: filePrivateDnsZoneName
   location: 'global'
+}
+
+resource mlPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: mlPrivateDnsZoneName
+  location: 'global'
+}
+
+resource mlPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: mlPrivateDnsZone
+  name: '${hubName}-azureml-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: true
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }
+  }
 }
 
 // Link the Private DNS Zones to the Virtual Network
@@ -121,6 +160,21 @@ resource filePrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNe
   }
 }
 
+resource mlPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-05-01' = {
+  parent: hubPrivateEndpoint
+  name: 'dnsgroupaihub'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: mlPrivateDnsZoneVnetLink.name
+        properties: {
+          privateDnsZoneId: mlPrivateDnsZone.id
+        }
+      }
+    ]
+  }
+}
+
 // Create DNS Zone Groups for the Private Endpoints
 resource blobPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-05-01' = {
   parent: blobPrivateEndpoint
@@ -128,7 +182,7 @@ resource blobPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: 'config1'
+        name: blobPrivateDnsZoneVnetLink.name
         properties: {
           privateDnsZoneId: blobPrivateDnsZone.id
         }
@@ -143,7 +197,7 @@ resource filePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: 'config1'
+        name: filePrivateDnsZoneVnetLink.name
         properties: {
           privateDnsZoneId: filePrivateDnsZone.id
         }
@@ -152,36 +206,6 @@ resource filePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
   }
 }
 
-// resource pepConnectionResource_1 'Microsoft.Storage/storageAccounts/privateEndpointConnections@2024-01-01' = {
-//   parent: storageaccount
-//   name: 'pepc_1_${storageaccount.name}'
-//   properties: {
-//     privateEndpoint: {}
-//     privateLinkServiceConnectionState: {
-//       status: 'Approved'
-//       description: 'Auto-approved by Azure AI managed network for workspace: hub-junk'
-//       actionRequired: 'None'
-//     }
-//   }
-// }
-
-// resource pepConnectionResource_2 'Microsoft.Storage/storageAccounts/privateEndpointConnections@2024-01-01' = {
-//   parent: storageaccount
-//   name: 'pepc_2_${storageaccount.name}'
-//   properties: {
-//     privateEndpoint: {
-
-//     }
-//     privateLinkServiceConnectionState: {
-//       status: 'Approved'
-//       description: 'Auto-approved by Azure AI managed network for workspace: hub-junk'
-//       actionRequired: 'None'
-//     }
-//   }
-// }
-
-// output privateEndpointConnection1 string = pepConnectionResource_1.id
-// output privateEndpointConnection2 string = pepConnectionResource_2.id
 output vnetId string = virtualNetwork.id
 output blobPrivateEndpointId string = blobPrivateEndpoint.id
 output filePrivateEndpointId string = filePrivateEndpoint.id

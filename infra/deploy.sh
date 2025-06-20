@@ -14,5 +14,6 @@ az group create -l $loc -n $rg --tags expiresOn=$expires_on
 echo "Deploying...."
 #outputs=$(az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg --query properties.outputs)
 az deployment group create -f /workspaces/aihub-secure-storage/infra/main.bicep -g $rg --query properties.outputs
-echo "Bicep deployment outputs:"
+echo "Deployment completed."
+#echo "Bicep deployment outputs:"
 #echo "$outputs"

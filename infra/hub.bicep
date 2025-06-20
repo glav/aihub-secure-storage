@@ -69,9 +69,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
-// This is the key to our errors, being able to get a proper managed virtual network ID
-var hubManagedVnetId = resourceId('Microsoft.MachineLearningServices/workspaces/managedVirtualNetworks',hubName,'default')
-//var hubManagedVnetId = '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.MachineLearningServices/workspaces/${hubName}/managedVirtualNetworks/default'
+
 
 // Role definitions
 var role_defn_storage_blob_data_contrib = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor
@@ -145,4 +143,3 @@ resource projectStorageReaderRoleAssignment 'Microsoft.Authorization/roleAssignm
 output hubName string = ai_hub.name
 output hubId string = ai_hub.id
 output keyVaultId string = keyVault.id
-output managedNetworkId string = hubManagedVnetId
