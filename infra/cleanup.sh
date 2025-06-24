@@ -12,7 +12,7 @@ echo "Finding keyvault in resource group $rg in location $loc..."
 kv=$(az keyvault list -g "$rg" --query '[0].name' | tr -d '"')
 
 echo "Keyvault found: $kv, now deleteting/purging..."
-az keyvault delete -n "$kv" -g "$"
+az keyvault delete -n "$kv" -g "$rg"
 az keyvault purge -n $kv -l $loc
 
 echo "Deleting resource group $rg..."

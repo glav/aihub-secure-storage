@@ -1,10 +1,14 @@
+param storageAccountName string
 param location string = 'australiaeast'
-param workspaces_hub_test_network_name string = 'hub-test-network'
-param storageAccountId string
+param hubName string = 'hub-test-network'
+
+resource storageaccount 'Microsoft.Storage/storageAccounts@2021-02-01' existing = {
+  name: storageAccountName
+}
 
 // Create a Virtual Network for private endpoints
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
-  name: 'vnet-${workspaces_hub_test_network_name}'
+  name: 'vnet-${hubName}'
   location: location
   properties: {
     addressSpace: {
@@ -34,16 +38,37 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-05-01' = {
   }
 }
 
-// Storage Account Private Endpoint for Blob
-resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
-  name: 'pep-${workspaces_hub_test_network_name}-blob'
+resource hubPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
+  name: 'pep-${hubName}-aihub'
   location: location
   properties: {
     privateLinkServiceConnections: [
       {
-        name: 'pls-${workspaces_hub_test_network_name}-blob'
+        name: 'pls-${hubName}-aihub'
         properties: {
-          privateLinkServiceId: storageAccountId
+          privateLinkServiceId: resourceId('Microsoft.MachineLearningServices/workspaces', hubName)
+          groupIds: [
+            'amlworkspace'
+          ]
+        }
+      }
+    ]
+    subnet: {
+      id: virtualNetwork.properties.subnets[1].id
+    }
+  }
+}
+
+// Storage Account Private Endpoint for Blob
+resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
+  name: 'pep-${hubName}-blob'
+  location: location
+  properties: {
+    privateLinkServiceConnections: [
+      {
+        name: 'pls-${hubName}-blob'
+        properties: {
+          privateLinkServiceId: storageaccount.id
           groupIds: [
             'blob'
           ]
@@ -51,21 +76,21 @@ resource blobPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
       }
     ]
     subnet: {
-      id: virtualNetwork.properties.subnets[0].id
+      id: virtualNetwork.properties.subnets[1].id
     }
   }
 }
 
 // Storage Account Private Endpoint for File
 resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
-  name: 'pep-${workspaces_hub_test_network_name}-file'
+  name: 'pep-${hubName}-file'
   location: location
   properties: {
     privateLinkServiceConnections: [
       {
-        name: 'pls-${workspaces_hub_test_network_name}-file'
+        name: 'pls-${hubName}-file'
         properties: {
-          privateLinkServiceId: storageAccountId
+          privateLinkServiceId: storageaccount.id
           groupIds: [
             'file'
           ]
@@ -73,7 +98,7 @@ resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
       }
     ]
     subnet: {
-      id: virtualNetwork.properties.subnets[0].id
+      id: virtualNetwork.properties.subnets[1].id
     }
   }
 }
@@ -81,6 +106,7 @@ resource filePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
 // Create Private DNS Zones for Storage
 var blobPrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
 var filePrivateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
+var mlPrivateDnsZoneName = 'privatelink.api.azureml.ms'
 
 resource blobPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: blobPrivateDnsZoneName
@@ -92,10 +118,27 @@ resource filePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   location: 'global'
 }
 
+resource mlPrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: mlPrivateDnsZoneName
+  location: 'global'
+}
+
+resource mlPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: mlPrivateDnsZone
+  name: '${hubName}-azureml-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: true
+    virtualNetwork: {
+      id: virtualNetwork.id
+    }
+  }
+}
+
 // Link the Private DNS Zones to the Virtual Network
 resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: blobPrivateDnsZone
-  name: '${workspaces_hub_test_network_name}-blob-link'
+  name: '${hubName}-blob-link'
   location: 'global'
   properties: {
     registrationEnabled: false
@@ -107,13 +150,28 @@ resource blobPrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNe
 
 resource filePrivateDnsZoneVnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: filePrivateDnsZone
-  name: '${workspaces_hub_test_network_name}-file-link'
+  name: '${hubName}-file-link'
   location: 'global'
   properties: {
     registrationEnabled: false
     virtualNetwork: {
       id: virtualNetwork.id
     }
+  }
+}
+
+resource mlPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-05-01' = {
+  parent: hubPrivateEndpoint
+  name: 'dnsgroupaihub'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: mlPrivateDnsZoneVnetLink.name
+        properties: {
+          privateDnsZoneId: mlPrivateDnsZone.id
+        }
+      }
+    ]
   }
 }
 
@@ -124,7 +182,7 @@ resource blobPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: 'config1'
+        name: blobPrivateDnsZoneVnetLink.name
         properties: {
           privateDnsZoneId: blobPrivateDnsZone.id
         }
@@ -139,7 +197,7 @@ resource filePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
   properties: {
     privateDnsZoneConfigs: [
       {
-        name: 'config1'
+        name: filePrivateDnsZoneVnetLink.name
         properties: {
           privateDnsZoneId: filePrivateDnsZone.id
         }
@@ -151,3 +209,6 @@ resource filePrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/private
 output vnetId string = virtualNetwork.id
 output blobPrivateEndpointId string = blobPrivateEndpoint.id
 output filePrivateEndpointId string = filePrivateEndpoint.id
+output blobPrivateDnsZoneName string = blobPrivateDnsZoneName
+output filePrivateDnsZoneName string = filePrivateDnsZoneName
+
