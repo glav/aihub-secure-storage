@@ -58,6 +58,7 @@ module projectNetworkApproverRole 'netwwork_approver_acct_permissions.bicep' = {
 
 
 // Update storage network rules after hub creation and permissions are granted
+// This adds a resource access rule for the hub resource id to the storage account
 module storageNetworkUpdate 'storage_network_update.bicep' = {
   name: 'storage-network-update'
   params: {
