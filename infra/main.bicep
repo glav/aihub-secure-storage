@@ -15,7 +15,6 @@ module hub 'hub.bicep' = {
   params: {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
-    storageAccountName: storage.outputs.storageAccountName
   }
 }
 
@@ -26,6 +25,7 @@ module workspacePermissions 'workspace_permissions.bicep' = {
   params: {
     storageAccountId: storage.outputs.storageAccountId
     hubPrincipalId: hub.outputs.hubPrincipalId
+    projectPrincipalId: hub.outputs.projectPrincipalId
   }
 }
 
