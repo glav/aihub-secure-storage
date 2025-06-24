@@ -1,6 +1,7 @@
 param hubName string = 'hub-test-network'
 param location string = 'australiaeast'
 param storageAccountId string
+param storageAccountName string
 
 resource ai_hub 'Microsoft.MachineLearningServices/workspaces@2025-01-01-preview' = {
   name: hubName
@@ -142,4 +143,5 @@ resource projectStorageReaderRoleAssignment 'Microsoft.Authorization/roleAssignm
 
 output hubName string = ai_hub.name
 output hubId string = ai_hub.id
+output hubPrincipalId string = ai_hub.identity.principalId
 output keyVaultId string = keyVault.id

@@ -1,11 +1,11 @@
 param storageAccountName string
 param hubResourceId string
 param location string
-param saKind string = 'StorageV2' // Default kind for Azure ML Hub
-param saSkuName string = 'Standard_LRS' // Default SKU for Azure ML Hub
+param saKind string = 'StorageV2'
+param saSkuName string = 'Standard_LRS'
 
-// Update the storage account network access rules to allow Azure ML Hub access
-resource storageNetworkRules 'Microsoft.Storage/storageAccounts@2024-01-01' = {
+// Update network ACLs to include resource access rules for the workspace
+resource storageNetworkUpdate 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   name: storageAccountName
   location: location
   kind: saKind
@@ -19,7 +19,7 @@ resource storageNetworkRules 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     networkAcls: {
-      bypass: 'AzureServices'  // This allows trusted Microsoft services including Azure ML
+      bypass: 'AzureServices'  // Allow trusted Microsoft services
       defaultAction: 'Deny'
       ipRules: []
       virtualNetworkRules: []
@@ -32,3 +32,5 @@ resource storageNetworkRules 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     }
   }
 }
+
+output storageAccountId string = storageNetworkUpdate.id

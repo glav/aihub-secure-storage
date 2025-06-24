@@ -15,27 +15,36 @@ module hub 'hub.bicep' = {
   params: {
     location: resourceGroup().location
     storageAccountId: storage.outputs.storageAccountId
+    storageAccountName: storage.outputs.storageAccountName
   }
 }
 
-module networking 'storage_networking.bicep' = {
-  name: 'networking'
+// Grant workspace managed identity the Azure AI Enterprise Network Connection Approver role
+// This is required for private endpoint connections to activate (new requirement after April 30, 2025)
+module workspacePermissions 'workspace_permissions.bicep' = {
+  name: 'workspace-permissions'
+  params: {
+    storageAccountId: storage.outputs.storageAccountId
+    hubPrincipalId: hub.outputs.hubPrincipalId
+  }
+}
+
+// Update storage network rules after hub creation and permissions are granted
+module storageNetworkUpdate 'storage_network_update.bicep' = {
+  name: 'storage-network-update'
   params: {
     storageAccountName: storage.outputs.storageAccountName
-    hubName: hub.outputs.hubName
-    location: resourceGroup().location
-  }
-}
-
-module storage_access 'storage_account_access.bicep' = {
-  name: 'storage_access'
-  params: {
     hubResourceId: hub.outputs.hubId
-    storageAccountName: storage.outputs.storageAccountName
     location: resourceGroup().location
     saKind: saKind
     saSkuName: saSkuName
   }
+  dependsOn: [
+    workspacePermissions
+  ]
 }
+
+// Note: After deployment, manually provision the managed VNet to activate private endpoints:
+// az ml workspace provision-network -g <resource-group> -n <workspace-name>
 
 //output managedVnetId string = networking.outputs.managedVnetId
