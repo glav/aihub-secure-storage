@@ -8,12 +8,30 @@ fi
 loc="$1"
 rg="$2"
 
-echo "Finding keyvault in resource group $rg in location $loc..."
-kv=$(az keyvault list -g "$rg" --query '[0].name' | tr -d '"')
+echo "=== Cleaning up Secure Storage Infrastructure ==="
+echo "Location: $loc"
+echo "Resource Group: $rg"
+echo ""
 
-echo "Keyvault found: $kv, now deleteting/purging..."
-az keyvault delete -n "$kv" -g "$rg"
-az keyvault purge -n $kv -l $loc
+echo "Listing resources to be deleted..."
+az resource list -g "$rg" --output table
 
-echo "Deleting resource group $rg..."
-az group delete -n "$rg" --yes
+echo ""
+echo "Deleting resource group $rg and all contained resources..."
+echo "This will remove:"
+echo "- Storage Account"
+echo "- Virtual Network"
+echo "- VPN Gateway"
+echo "- Private Endpoints"
+echo "- Private DNS Zones"
+echo ""
+
+read -p "Are you sure you want to delete all resources? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    az group delete -n "$rg" --yes
+    echo "Resource group deletion initiated. This may take several minutes to complete."
+    echo "You can check the status with: az group show -n $rg"
+else
+    echo "Cleanup cancelled."
+fi

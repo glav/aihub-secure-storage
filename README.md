@@ -1,12 +1,45 @@
-# Azure AI Hub with Secure Storage
+# Secure Storage with Private Network Access
 
-This project deploys an Azure AI Hub with secure storage infrastructure using Azure Bicep templates and shell scripts.
+This project deploys a secure Azure Storage Account with private network access using Azure Bicep templates and shell scripts. The infrastructure provides:
+
+- **Secure Storage Account** with no public access
+- **Custom Virtual Network** with dedicated subnets
+- **Private Endpoint** for secure storage access
+- **VPN Gateway** for Point-to-Site connectivity
+- **Private DNS** for proper name resolution
+
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│              VNet 10.0.0.0/16          │
+│  ┌─────────────────┐ ┌─────────────────┐│
+│  │ Storage Subnet  │ │ Gateway Subnet  ││
+│  │ 10.0.1.0/24     │ │ 10.0.255.0/27   ││
+│  │                 │ │                 ││
+│  │ ┌─────────────┐ │ │ ┌─────────────┐ ││
+│  │ │ Private     │ │ │ │ VPN Gateway │ ││
+│  │ │ Endpoint    │ │ │ │             │ ││
+│  │ └─────────────┘ │ │ └─────────────┘ ││
+│  └─────────────────┘ └─────────────────┘│
+└─────────────────────────────────────────┘
+           │                    │
+           │                    │ VPN
+    ┌─────────────┐             │ Connection
+    │   Storage   │             │
+    │   Account   │             ▼
+    │ (Private)   │     ┌─────────────┐
+    └─────────────┘     │   Client    │
+                        │   Device    │
+                        └─────────────┘
+```
 
 ## Prerequisites
 
 - Azure CLI installed and configured
 - Appropriate Azure subscription permissions to create resource groups and deploy resources
-- Bash shell environment (available in the dev container)
+- Bash shell environment
+- OpenSSL for certificate generation (for VPN access)
 
 ## Deployment
 
@@ -25,24 +58,45 @@ cd infra
 
 **Example:**
 ```bash
-./deploy.sh eastus my-aihub-rg
+./deploy.sh eastus my-secure-storage-rg
 ```
 
 **What the deploy script does:**
 1. Creates a new Azure resource group with a 7-day expiration tag
 2. Deploys the main Bicep template (`main.bicep`) which provisions:
-   - Azure ML workspace
-   - Storage account with secure configuration
-   - Key Vault
-   - Other supporting resources
-3. Provisions the managed network for the ML workspace
-4. Configures datastore authentication using the `configure_datastore_auth.sh` script
+   - Virtual Network with subnets
+   - Storage account with secure configuration (no public access)
+   - Private endpoint for storage access
+   - VPN gateway for Point-to-Site connectivity
+   - Private DNS zone for name resolution
+3. Outputs deployment information including VPN gateway details
 
 ### Post-Deployment Configuration
 
-The deployment automatically runs `configure_datastore_auth.sh` to set up proper permissions for accessing the storage account. This script:
-- Assigns the current user the "Storage Blob Data Reader" role on the storage account
-- Configures authentication for Azure ML datastore access
+After deployment completes, you need to configure VPN access:
+
+```bash
+./configure_vpn.sh <resource-group> <vpn-gateway-name>
+```
+
+This script provides instructions for:
+1. **Certificate Generation**: Create root and client certificates for VPN authentication
+2. **Certificate Upload**: Upload the root certificate to the VPN gateway
+3. **Client Configuration**: Download and configure the VPN client
+4. **Storage Access**: Instructions for accessing the storage account via VPN
+
+### Accessing Storage
+
+Once VPN is configured and connected:
+
+1. **Connect to VPN** using the client configuration
+2. **Access Storage** using any of these methods:
+   - Azure Storage Explorer
+   - Azure CLI: `az storage blob list --account-name <storage-name>`
+   - Azure PowerShell: `Get-AzStorageBlob`
+   - REST API calls to the private endpoint
+
+**Important**: The storage account has **no public access** and can only be reached through the private endpoint via VPN connection.
 
 ## Cleanup
 
@@ -61,33 +115,72 @@ cd infra
 
 **Example:**
 ```bash
-./cleanup.sh eastus my-aihub-rg
+./cleanup.sh eastus my-secure-storage-rg
 ```
 
 **What the cleanup script does:**
-1. Finds and deletes the Key Vault in the specified resource group
-2. Purges the Key Vault (permanently removes it)
+1. Lists all resources in the resource group
+2. Prompts for confirmation before deletion
 3. Deletes the entire resource group and all contained resources
 
 **⚠️ Warning:** The cleanup script permanently deletes all resources in the specified resource group. This action cannot be undone.
 
+## Security Features
+
+- **No Public Access**: Storage account has public network access completely disabled
+- **Private Endpoint**: Storage access only through private endpoint within VNet
+- **VPN Authentication**: Certificate-based authentication for VPN connections
+- **Network Isolation**: All traffic flows through private network channels
+- **DNS Resolution**: Private DNS zones ensure proper name resolution for private endpoints
+
+## Troubleshooting
+
+### Common Issues
+
+1. **VPN Connection Fails**
+   - Verify certificates are properly generated and uploaded
+   - Check VPN client configuration
+   - Ensure client certificate is installed on the device
+
+2. **Storage Access Denied**
+   - Confirm VPN connection is active
+   - Verify you're accessing storage through the private endpoint
+   - Check that you have appropriate storage permissions
+
+3. **DNS Resolution Issues**
+   - Ensure private DNS zone is linked to the VNet
+   - Verify DNS settings in VPN client configuration
+
 ## Additional Scripts
 
-- **`configure_datastore_auth.sh`** - Configures user permissions for Azure ML datastore access (automatically called by deploy.sh)
+- **`configure_vpn.sh`** - Provides step-by-step VPN configuration instructions
 - **`comprehensive_troubleshooting.sh`** - Troubleshooting utilities for deployment issues
-- **`storage_network_update.bicep`** - Bicep template for updating storage network configurations
-- **`workspace_permissions.bicep`** - Bicep template for workspace permission configurations
 
 ## Project Structure
 
 ```
 infra/
-├── deploy.sh                      # Main deployment script
-├── cleanup.sh                     # Resource cleanup script
-├── configure_datastore_auth.sh    # Permission configuration script
-├── main.bicep                     # Main Bicep deployment template
-├── hub.bicep                      # AI Hub specific resources
-├── storage_account.bicep          # Storage account configuration
-└── ...                           # Additional Bicep templates
+├── deploy.sh                 # Main deployment script
+├── cleanup.sh                # Resource cleanup script
+├── configure_vpn.sh          # VPN configuration guide
+├── main.bicep                # Main Bicep deployment template
+├── vnet.bicep                # Virtual network configuration
+├── storage_account.bicep     # Storage account configuration
+├── private_endpoint.bicep    # Private endpoint configuration
+├── vpn_gateway.bicep         # VPN gateway configuration
+└── private_dns.bicep         # Private DNS zone configuration
 ```
+
+## Cost Considerations
+
+The main cost components of this infrastructure are:
+- **VPN Gateway**: ~$140-300/month depending on SKU
+- **Storage Account**: Based on usage (storage, transactions, data transfer)
+- **Virtual Network**: Minimal cost for VNet and subnets
+- **Private Endpoint**: ~$7.50/month per endpoint
+
+To reduce costs:
+- Use Basic VPN Gateway SKU for development/testing
+- Consider Site-to-Site VPN if you have on-premises infrastructure
+- Monitor storage usage and optimize data lifecycle policies
 

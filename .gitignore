@@ -9,3 +9,4 @@ __pycache__
 output
 *.log
  git-credential-manager/
+**/vpn-certificates/*
